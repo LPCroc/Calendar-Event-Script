@@ -1,0 +1,329 @@
+==================================================================
+  CALENDAR & EVENT SYSTEM  —  INSTALL & SETUP GUIDE  (TEMPLATE)
+==================================================================
+  An AI Dungeon script that tracks an in-game date and time and
+  keeps ONE auto-updating "Calendar" story card showing the date,
+  today's schedule, and any events that are currently active.
+
+  It works for any setting — school, job, ship, guild, fantasy
+  kingdom — anything with a daily rhythm and dated happenings.
+
+  The template runs out of the box with neutral placeholder
+  content. You then replace that content with your own.
+
+  CONTENTS
+    1. What's in the package
+    2. Installation
+    3. First run / quick check
+    4. SECTION 1 - Calendar config
+    5. SECTION 2 - Daily schedule
+    6. SECTION 3 - Events
+    7. The Calendar card
+    8. Advancing time
+    9. Commands
+   10. Story flags
+   11. Good to know / limits
+   12. Troubleshooting
+
+
+------------------------------------------------------------------
+  1. WHAT'S IN THE PACKAGE
+------------------------------------------------------------------
+GOES INTO AI DUNGEON:
+  Calendar Event System.js   the script itself (the "library")
+  input.js                   input hook
+  context.js                 context hook
+  output.js                  output hook
+
+REFERENCE / YOUR COMPUTER ONLY (never paste these into AI Dungeon):
+  CALENDAR & EVENT SYSTEM - GUIDE.txt        this file
+  Run Template Test.bat                      double-click to test your edits
+  LOCAL TEST (Node) - do not paste into AID.js   the test itself
+
+You only ever edit "Calendar Event System.js". The three hook
+files are tiny and never need changing.
+
+OPTIONAL - TESTING YOUR EDITS BEFORE YOU PASTE
+  If you have Node.js installed (https://nodejs.org), double-click
+  "Run Template Test.bat". It runs the script on your computer,
+  prints your Calendar card, and checks that events fire on the
+  right dates and that time advances correctly. It never touches
+  AI Dungeon. Some date-specific checks assume the shipped example
+  content, so after you put in your own dates just eyeball the
+  printed Calendar card instead.
+
+
+------------------------------------------------------------------
+  2. INSTALLATION
+------------------------------------------------------------------
+In your AI Dungeon scenario, open the Scripts editor:
+
+  1. Calendar Event System.js  ->  LIBRARY
+     Create/open the Library tab and paste the WHOLE file in.
+     The library must load before the hooks (it does by default).
+
+  2. input.js    ->  INPUT tab
+  3. context.js  ->  CONTEXT tab
+  4. output.js   ->  OUTPUT tab
+
+After you edit the script, re-paste it into the LIBRARY tab.
+(Only the library changes when you customize; the three hook
+files stay as they are.)
+
+
+------------------------------------------------------------------
+  3. FIRST RUN / QUICK CHECK
+------------------------------------------------------------------
+Start an adventure and take one action. You should see a new story
+card named "📅 Calendar" appear, containing something like:
+
+  {Current Date: Monday, January 1, Year 1 (Morning)}
+  {Today's Schedule: First session (9:00am to 11:00am), ...}
+
+If you type "/date" as a STORY action you should get the current
+date back as a system message. If both work, you're installed.
+
+
+------------------------------------------------------------------
+  4. SECTION 1 - CALENDAR CONFIG
+------------------------------------------------------------------
+Near the top of the script:
+
+  const CALENDAR_CONFIG = {
+    startMonth:   "January",
+    startDay:     1,
+    startYear:    1,
+    startWeekday: "Monday",
+    startTime:    "Morning",
+    daysPerMonth: 30
+  };
+
+  startMonth    Must match one of the MONTHS names below it.
+  startDay      1 up to daysPerMonth.
+  startYear     Any number; shown as "Year 1", "Year 2", ...
+  startWeekday  IMPORTANT - set this to the weekday your story
+                actually begins on. Everything else is calculated
+                from it, so if this is wrong every weekday is wrong.
+  startTime     Morning | Afternoon | Evening | Night
+  daysPerMonth  Every month is this long (default 30). This keeps
+                the date math simple and predictable.
+
+You can also rename the lists just below it:
+
+  MONTHS        Your month names, in order. The year rolls over
+                after the LAST one. Add/remove/rename freely
+                (e.g. "Frostmoon", "Highsun", ...).
+  WEEKDAYS      Your weekday names, in order. You may use more or
+                fewer than seven.
+  TIMES_OF_DAY  The parts of a day, in order.
+  SCHEDULE_LABEL  The label on the card's schedule line, e.g.
+                "Today's Schedule", "Today's Periods",
+                "Today's Duties", "Today's Watch".
+
+Tip: state is created once, at the start of an adventure. If you
+change the start date after already playing, begin a fresh
+adventure (or use /setday) so the new values take effect.
+
+
+------------------------------------------------------------------
+  5. SECTION 2 - DAILY SCHEDULE
+------------------------------------------------------------------
+What a normal day looks like, per weekday:
+
+  const DAILY_SCHEDULE = {
+    Monday:    "First session (9:00am to 11:00am), ...",
+    ...
+    Saturday:  "No scheduled sessions. Free time for personal activities.",
+    Sunday:    "Day off. A good time to rest, explore, or spend time with others."
+  };
+
+  - The text is exactly what the AI sees for that day.
+  - The keys must match your WEEKDAYS names.
+  - Use "" (an empty string) for a day with nothing scheduled;
+    the schedule line is then left off the card entirely.
+
+A commented school example sits right below it in the script -
+copy that style and swap in your own content. Other ideas: work
+shifts, a ship's watch rota, training, tavern hours, a prison
+routine.
+
+
+------------------------------------------------------------------
+  6. SECTION 3 - EVENTS
+------------------------------------------------------------------
+Events are things that happen on certain days, or under certain
+conditions. Each one looks like this:
+
+  {
+    id: "example_festival",          // unique; don't reuse or change in play
+    title: "Town Festival",          // label on the card line
+    keys: "Festival, Celebration",   // trigger keywords, comma separated
+    entry: "A festival fills the streets today - ...",   // what the AI sees
+    conditions: {
+      date: "January 12",   // START day, "Month Day". null = any date
+      duration: 1,          // days it lasts from `date` (omit/1 = one day)
+      weekday: null,        // "Monday" etc. null = any day
+      flags: []             // required story flags ([] = none)
+    },
+    priority: 5             // higher = listed first when events overlap
+  }
+
+All conditions are AND-ed: date AND weekday AND flags must match.
+
+SINGLE-DAY EVENT
+  Set `date` and leave duration at 1 (or omit it).
+
+MULTI-DAY EVENT
+  Set `duration` to the number of days, counted INCLUSIVELY from
+  `date`, and leave weekday null.
+      Formula: duration = (last day - first day) + 1
+      January 8 through January 11  ->  (11 - 8) + 1  ->  4
+
+RECURRING WEEKLY EVENT
+  Set `date: null` and `weekday: "Friday"` - it then fires every
+  Friday.
+
+FLAG-GATED EVENT
+  Put a flag name in `flags`. The event shows only while that flag
+  is set (see section 10). Combine with a date, or use `date: null`
+  for a purely story-driven event.
+
+PRIORITY
+  Only matters when several events are active on the same day -
+  higher numbers are listed first on the card.
+
+The template ships with three commented examples (single-day,
+multi-day, flag-gated) plus a school-flavoured example block.
+Delete the examples once you've added your own.
+
+
+------------------------------------------------------------------
+  7. THE CALENDAR CARD
+------------------------------------------------------------------
+The script creates and maintains ONE story card named
+"📅 Calendar". It is rebuilt from scratch every turn and looks like:
+
+  {Current Date: Monday, January 1, Year 1 (Morning)}
+  {Today's Schedule: First session (9:00am to 11:00am), ...}
+  {Town Festival: A festival fills the streets today - ...}
+
+  - It updates itself in place; there is never a duplicate.
+  - Its triggers are always-on, so the AI reliably sees the date.
+  - An event's line appears while its conditions match and
+    disappears on its own when they stop matching.
+
+DO NOT hand-edit this card. The script rewrites it every turn, so
+any manual change is overwritten. Put your own notes in Plot
+Essentials or a separate story card instead.
+
+
+------------------------------------------------------------------
+  8. ADVANCING TIME
+------------------------------------------------------------------
+Time does NOT pass on its own - the player advances it.
+
+Advance a whole day (to the next morning):
+  end the day  /  pass the day  /  next day  /  go to sleep
+
+Advance one part of the day:
+  pass time  /  time passes  /  later that day
+  (Morning -> Afternoon -> Evening -> Night -> next morning)
+
+These work typed as a STORY, DO, or SAY action. You'll see a
+confirmation line:
+
+  [ A day passes - it's now Tuesday, January 2, Year 1 (Morning) ]
+
+Tip for players: end the day when the day is actually finished
+(evening/night), so the new day starts cleanly.
+
+
+------------------------------------------------------------------
+  9. COMMANDS   (type these as a STORY action)
+------------------------------------------------------------------
+  /date                    show the current date
+  /setday <Month> <Day>    jump to a date  e.g. /setday January 15
+  /setflag <name>          set a story flag
+  /removeflag <name>       remove a story flag
+  /listflags               list the flags currently set
+  /listevents              list every registered event
+
+Slash commands only work as a STORY action, because they must
+start with "/". (The advance phrases in section 8 work as Story,
+Do, or Say.)
+
+A command still produces an AI turn - AI Dungeon can't suppress
+that from the input hook - but the command text won't appear in
+the story, and the result shows as a system message.
+
+
+------------------------------------------------------------------
+  10. STORY FLAGS
+------------------------------------------------------------------
+Flags are simple on/off switches you control, used to gate events
+behind story progress rather than just dates.
+
+  /setflag storm       turns it on
+  /removeflag storm    turns it off
+  /listflags           shows what's set
+
+Any event whose `flags` list includes that name then becomes
+eligible (its date/weekday must still match, if it has any).
+
+  conditions: { date: null, duration: 1, weekday: null, flags: ["storm"] }
+
+Flag names are case-insensitive, so /setflag Storm matches
+flags: ["storm"].
+
+Use them for: an event that only happens after something occurred,
+route-specific content, seasonal toggles, weather, or anything you
+want to switch on mid-story.
+
+
+------------------------------------------------------------------
+  11. GOOD TO KNOW / LIMITS
+------------------------------------------------------------------
+- Set startWeekday correctly for your start date. From there the
+  weekday is recalculated from the date every turn, so /setday
+  always lands on the right weekday and schedule.
+- Every month is daysPerMonth long (default 30). There is no
+  "31st" unless you raise daysPerMonth.
+- A multi-day event that would cross the YEAR boundary (past the
+  last month in MONTHS) does not carry across it. Spans inside a
+  single year work fine.
+- Events are matched by date, not by turn count, so skipping ahead
+  with /setday correctly activates whatever belongs on that date.
+- The script never writes to Plot Essentials / memory.
+
+
+------------------------------------------------------------------
+  12. TROUBLESHOOTING
+------------------------------------------------------------------
+No Calendar card appears?
+  Make sure the library is pasted into the LIBRARY tab and the
+  three hooks into INPUT / CONTEXT / OUTPUT, then take one action.
+
+The card isn't updating?
+  Re-paste the latest script into the LIBRARY tab. The card is
+  updated through updateStoryCard(); older hand-edited copies that
+  assign the entry directly will freeze on their first day.
+
+An event isn't showing up?
+  Check EVERY condition for the current day: date + duration,
+  weekday, and flags must all match. A leftover flag requirement is
+  the most common cause. Use /listevents to confirm it's
+  registered, /listflags to see your flags, and /date to confirm
+  today's date.
+
+The weekday looks wrong?
+  Check startWeekday in CALENDAR_CONFIG - it must be the weekday
+  your chosen startMonth/startDay actually falls on. Every other
+  weekday is derived from it.
+
+"end the day" does nothing?
+  Type it on its own, as its own action. Extra words around it
+  ("I think I'll end the day now") won't match.
+
+A command got written into the story?
+  Type slash commands as a STORY action.
+==================================================================
