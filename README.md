@@ -5,9 +5,10 @@ CALENDAR & EVENT SYSTEM  —  COMPLETE GUIDE
   showing the date, the day's class schedule, and active events.
 
   CONTENTS
+  
     1. What's in the package
     2. Installation
-    3. Setting your start date
+    3. Setting your start dat
     4. The Calendar card
     5. Advancing time
     6. Commands
@@ -26,6 +27,7 @@ CALENDAR & EVENT SYSTEM  —  COMPLETE GUIDE
 ------------------------------------------------------------------
   1. WHAT'S IN THE PACKAGE
 ------------------------------------------------------------------
+
 You have 4 script files:
 
   Calendar Event System.js   the core logic (the "library")
@@ -37,6 +39,7 @@ You have 4 script files:
 ------------------------------------------------------------------
   2. INSTALLATION
 ------------------------------------------------------------------
+
 In your AI Dungeon scenario:
 
   1. Calendar Event System.js  ->  Script Card (Library)
